@@ -21,9 +21,6 @@ export function createContext() {
     logPrefix: ''
   });
 
-  globalLogger.info(`CLASSIC_PAT: ${core.getInput('classic-pat').slice(0, 5)}`);
-  globalLogger.info(`OWNERS: ${core.getInput('owners').slice(0, 11)}`);
-
   const classicPat = github.getOctokit(core.getInput('classic-pat'));
 
   const status: Record<string, OwnerStatus> = {};
