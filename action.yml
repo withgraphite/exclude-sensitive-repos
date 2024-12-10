@@ -4,25 +4,21 @@ author: 'withgraphite'
 
 inputs:
   classic-pat:
-    description: >
-      A [classic PAT](https://github.com/settings/tokens/new?scopes=repo) with
-      `repo` permissions. This token will be used to [manage the installed
-      repositories](https://docs.github.com/en/rest/apps/installations?apiVersion=2022-11-28#add-a-repository-to-an-app-installation)
-      on each of the app installations and must have access to the owners in
-      question.
+    description: |
+      A classic PAT with `repo` permissions. This token will be used to manage 
+      the installed repositories on each of the app installations and must 
+      have access to the owners in question.
     required: true
 
   owners:
     description: |
       An array of objects with the following properties:  
-      - `login` (required):
-      the GitHub login of the owner (e.g. 'withgraphite') - `installId`
-      (required): the ID of the app installation to manage (e.g. 23731826) -
-      `fineGrainedPat` (required): a [fine-grained
-      PAT](https://github.com/settings/personal-access-tokens/new)
-        that must have access to the owner and contain the 'Custom properties' 
-        organization scope to consume the [custom properties API
-      endpoint](https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#list-custom-property-values-for-organization-repositories)
+      - `login` (required): the GitHub login of the owner (e.g. 'withgraphite')
+      - `installId` (required): the ID of the app installation to manage 
+        (e.g. 23731826)
+      - `fineGrainedPat` (required): a fine-grained PAT that must have access 
+        to the owner and contain the 'Custom properties' organization scope to 
+        consume the custom properties API endpoint 
       - `skip` (optional): if `true`, the owner will be skipped
     required: true
 
