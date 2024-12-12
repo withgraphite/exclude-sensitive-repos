@@ -37,7 +37,6 @@ async function runOnOwner(context: OwnerContext) {
       removeRepos: sensitiveRepos,
       context,
     });
-    context.setStatus("SUCCESS");
   } catch (err) {
     context.log.error(`Failed to run on ${context.login}`, err);
     context.setStatus("FAILURE");
@@ -138,6 +137,7 @@ async function updateInstalledRepos({
       context.log.info(`+ ${repo.fullName} (status: ${res.status})`);
     } catch (err) {
       context.log.error(`Failed to add ${repo.fullName} (id: ${repo.id})`, err);
+      context.setStatus("FAILURE");
     }
   }
   context.log.info(``);
@@ -156,6 +156,7 @@ async function updateInstalledRepos({
         `Failed to remove ${repo.fullName} (id: ${repo.id})`,
         err,
       );
+      context.setStatus("FAILURE");
     }
   }
   context.log.info(``);

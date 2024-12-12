@@ -34331,6 +34331,7 @@ function createContext() {
             tokens: classicPatTokens,
             logger: ownerLogger,
         });
+        status[owner.login] = "SUCCESS";
         return {
             ...owner,
             github: {
@@ -34466,7 +34467,6 @@ async function runOnOwner(context) {
             removeRepos: sensitiveRepos,
             context,
         });
-        context.setStatus("SUCCESS");
     }
     catch (err) {
         context.log.error(`Failed to run on ${context.login}`, err);
@@ -34533,6 +34533,7 @@ async function updateInstalledRepos({ addRepos, removeRepos, context, }) {
         }
         catch (err) {
             context.log.error(`Failed to add ${repo.fullName} (id: ${repo.id})`, err);
+            context.setStatus("FAILURE");
         }
     }
     context.log.info(``);
@@ -34548,6 +34549,7 @@ async function updateInstalledRepos({ addRepos, removeRepos, context, }) {
         }
         catch (err) {
             context.log.error(`Failed to remove ${repo.fullName} (id: ${repo.id})`, err);
+            context.setStatus("FAILURE");
         }
     }
     context.log.info(``);

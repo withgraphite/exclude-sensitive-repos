@@ -54,6 +54,8 @@ export function createContext() {
         logger: ownerLogger,
       });
 
+      status[owner.login] = "SUCCESS";
+
       return {
         ...owner,
         github: {
