@@ -34322,25 +34322,18 @@ function createContext() {
         const ownerLogger = createLogger({
             logPrefix: `[${owner.login}]  `,
         });
-        const attachRateLimitLogger = (octokit) => {
-            octokit.hook.after("request", (response, options) => {
-                ownerLogger.debug(options.url);
-                ownerLogger.debug(`x-ratelimit-remaining: ${response.headers["x-ratelimit-remaining"]}`);
-                ownerLogger.debug(`x-ratelimit-limit: ${response.headers["x-ratelimit-limit"]}`);
-                const reset = parseFloat(response.headers["x-ratelimit-reset"] || "");
-                if (!isNaN(reset)) {
-                    // https://stackoverflow.com/questions/4631928/convert-utc-epoch-to-local-date
-                    ownerLogger.debug(`x-ratelimit-reset: ${new Date(reset * 1000).toLocaleString()}`);
-                }
-            });
-            return octokit;
-        };
         const fineGrainedPat = github.getOctokit(owner.fineGrainedPat);
         return {
             ...owner,
             github: {
-                classicPat: attachRateLimitLogger(classicPat),
-                fineGrainedPat: attachRateLimitLogger(fineGrainedPat),
+                classicPat: attachRateLimitLogger({
+                    octokit: classicPat,
+                    logger: ownerLogger,
+                }),
+                fineGrainedPat: attachRateLimitLogger({
+                    octokit: fineGrainedPat,
+                    logger: ownerLogger,
+                }),
             },
             log: ownerLogger,
             setStatus: (result) => (status[owner.login] = result),
@@ -34372,6 +34365,19 @@ function createLogger({ logPrefix }) {
         repos,
         error,
     };
+}
+function attachRateLimitLogger({ octokit, logger, }) {
+    octokit.hook.after("request", (response, options) => {
+        logger.debug(options.url);
+        logger.debug(`x-ratelimit-remaining: ${response.headers["x-ratelimit-remaining"]}`);
+        logger.debug(`x-ratelimit-limit: ${response.headers["x-ratelimit-limit"]}`);
+        const reset = parseFloat(response.headers["x-ratelimit-reset"] || "");
+        if (!isNaN(reset)) {
+            // https://stackoverflow.com/questions/4631928/convert-utc-epoch-to-local-date
+            logger.debug(`x-ratelimit-reset: ${new Date(reset * 1000).toLocaleString()}`);
+        }
+    });
+    return octokit;
 }
 
 
