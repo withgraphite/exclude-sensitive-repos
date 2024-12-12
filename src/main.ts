@@ -57,12 +57,15 @@ async function fetchOrgRepos(context: OwnerContext): Promise<{
     }
   > = {};
 
-  for await (const response of context.github.fineGrainedPat.paginate.iterator(
-    context.github.fineGrainedPat.rest.orgs.listCustomPropertiesValuesForRepos,
-    {
-      org: context.login,
-    },
-  )) {
+  for await (const response of context.github
+    .fineGrainedPat()
+    .paginate.iterator(
+      context.github.fineGrainedPat().rest.orgs
+        .listCustomPropertiesValuesForRepos,
+      {
+        org: context.login,
+      },
+    )) {
     response.data.forEach((repo) => {
       const properties = repo.properties.reduce(
         (acc, { property_name, value }) => {
@@ -126,13 +129,12 @@ async function updateInstalledRepos({
 
   for (const repo of addRepos) {
     try {
-      const res =
-        await context.github.classicPat.rest.apps.addRepoToInstallationForAuthenticatedUser(
-          {
-            installation_id: context.installId,
-            repository_id: repo.id,
-          },
-        );
+      const res = await context.github
+        .classicPat()
+        .rest.apps.addRepoToInstallationForAuthenticatedUser({
+          installation_id: context.installId,
+          repository_id: repo.id,
+        });
       context.log.info(`+ ${repo.fullName} (status: ${res.status})`);
     } catch (err) {
       context.log.error(`Failed to add ${repo.fullName} (id: ${repo.id})`, err);
@@ -142,13 +144,12 @@ async function updateInstalledRepos({
 
   for (const repo of removeRepos) {
     try {
-      const res =
-        await context.github.classicPat.rest.apps.removeRepoFromInstallationForAuthenticatedUser(
-          {
-            installation_id: context.installId,
-            repository_id: repo.id,
-          },
-        );
+      const res = await context.github
+        .classicPat()
+        .rest.apps.removeRepoFromInstallationForAuthenticatedUser({
+          installation_id: context.installId,
+          repository_id: repo.id,
+        });
       context.log.info(`- ${repo.fullName} (status: ${res.status})`);
     } catch (err) {
       context.log.error(

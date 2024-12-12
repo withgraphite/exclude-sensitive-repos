@@ -34305,7 +34305,7 @@ function createContext() {
     const globalLogger = createLogger({
         logPrefix: "",
     });
-    const classicPat = github.getOctokit(core.getInput("classic-pat"));
+    const classicPatToken = core.getInput("classic-pat");
     const status = {};
     const printSummary = () => {
         const keys = Object.keys(status).sort();
@@ -34317,23 +34317,24 @@ function createContext() {
     };
     const hasFailure = () => Object.values(status).some((v) => !v);
     const owners = ownersSchema
-        .parse(JSON.parse(core.getInput("OWNERS")))
+        .parse(JSON.parse(core.getInput("owners")))
         .map((owner) => {
         const ownerLogger = createLogger({
             logPrefix: `[${owner.login}]  `,
         });
-        const fineGrainedPat = github.getOctokit(owner.fineGrainedPat);
+        const fineGrainedPat = createRoundRobinOctokit({
+            tokens: [owner.fineGrainedPat],
+            logger: ownerLogger,
+        });
+        const classicPat = createRoundRobinOctokit({
+            tokens: [classicPatToken],
+            logger: ownerLogger,
+        });
         return {
             ...owner,
             github: {
-                classicPat: attachRateLimitLogger({
-                    octokit: classicPat,
-                    logger: ownerLogger,
-                }),
-                fineGrainedPat: attachRateLimitLogger({
-                    octokit: fineGrainedPat,
-                    logger: ownerLogger,
-                }),
+                classicPat,
+                fineGrainedPat,
             },
             log: ownerLogger,
             setStatus: (result) => (status[owner.login] = result),
@@ -34364,6 +34365,22 @@ function createLogger({ logPrefix }) {
         info,
         repos,
         error,
+        extendPrefix: (addedStr) => createLogger({
+            logPrefix: logPrefix + addedStr,
+        }),
+    };
+}
+function createRoundRobinOctokit({ tokens, logger, }) {
+    let i = 0;
+    return () => {
+        i = (i + 1) % tokens.length;
+        const octokit = github.getOctokit(tokens[i]);
+        return attachRateLimitLogger({
+            octokit,
+            logger: tokens.length > 1
+                ? logger.extendPrefix(` [token ${i + 1}/${tokens.length}]`)
+                : logger,
+        });
     };
 }
 function attachRateLimitLogger({ octokit, logger, }) {
@@ -34457,7 +34474,10 @@ async function runOnOwner(context) {
 }
 async function fetchOrgRepos(context) {
     const repoInfo = {};
-    for await (const response of context.github.fineGrainedPat.paginate.iterator(context.github.fineGrainedPat.rest.orgs.listCustomPropertiesValuesForRepos, {
+    for await (const response of context.github
+        .fineGrainedPat()
+        .paginate.iterator(context.github.fineGrainedPat().rest.orgs
+        .listCustomPropertiesValuesForRepos, {
         org: context.login,
     })) {
         response.data.forEach((repo) => {
@@ -34502,7 +34522,9 @@ async function updateInstalledRepos({ addRepos, removeRepos, context, }) {
     context.log.info(``);
     for (const repo of addRepos) {
         try {
-            const res = await context.github.classicPat.rest.apps.addRepoToInstallationForAuthenticatedUser({
+            const res = await context.github
+                .classicPat()
+                .rest.apps.addRepoToInstallationForAuthenticatedUser({
                 installation_id: context.installId,
                 repository_id: repo.id,
             });
@@ -34515,7 +34537,9 @@ async function updateInstalledRepos({ addRepos, removeRepos, context, }) {
     context.log.info(``);
     for (const repo of removeRepos) {
         try {
-            const res = await context.github.classicPat.rest.apps.removeRepoFromInstallationForAuthenticatedUser({
+            const res = await context.github
+                .classicPat()
+                .rest.apps.removeRepoFromInstallationForAuthenticatedUser({
                 installation_id: context.installId,
                 repository_id: repo.id,
             });

@@ -21,7 +21,7 @@ export function createContext() {
     logPrefix: "",
   });
 
-  const classicPat = github.getOctokit(core.getInput("classic-pat"));
+  const classicPatToken = core.getInput("classic-pat");
 
   const status: Record<string, OwnerStatus> = {};
   const printSummary = () => {
@@ -35,24 +35,26 @@ export function createContext() {
   const hasFailure = () => Object.values(status).some((v) => !v);
 
   const owners = ownersSchema
-    .parse(JSON.parse(core.getInput("OWNERS")))
+    .parse(JSON.parse(core.getInput("owners")))
     .map((owner) => {
       const ownerLogger = createLogger({
         logPrefix: `[${owner.login}]  `,
       });
-      const fineGrainedPat = github.getOctokit(owner.fineGrainedPat);
+
+      const fineGrainedPat = createRoundRobinOctokit({
+        tokens: [owner.fineGrainedPat],
+        logger: ownerLogger,
+      });
+      const classicPat = createRoundRobinOctokit({
+        tokens: [classicPatToken],
+        logger: ownerLogger,
+      });
 
       return {
         ...owner,
         github: {
-          classicPat: attachRateLimitLogger({
-            octokit: classicPat,
-            logger: ownerLogger,
-          }),
-          fineGrainedPat: attachRateLimitLogger({
-            octokit: fineGrainedPat,
-            logger: ownerLogger,
-          }),
+          classicPat,
+          fineGrainedPat,
         },
         log: ownerLogger,
         setStatus: (result: OwnerStatus) => (status[owner.login] = result),
@@ -88,6 +90,31 @@ function createLogger({ logPrefix }: { logPrefix: string }) {
     info,
     repos,
     error,
+    extendPrefix: (addedStr: string) =>
+      createLogger({
+        logPrefix: logPrefix + addedStr,
+      }),
+  };
+}
+
+function createRoundRobinOctokit({
+  tokens,
+  logger,
+}: {
+  tokens: string[];
+  logger: Logger;
+}) {
+  let i = 0;
+  return () => {
+    i = (i + 1) % tokens.length;
+    const octokit = github.getOctokit(tokens[i]);
+    return attachRateLimitLogger({
+      octokit,
+      logger:
+        tokens.length > 1
+          ? logger.extendPrefix(` [token ${i + 1}/${tokens.length}]`)
+          : logger,
+    });
   };
 }
 
