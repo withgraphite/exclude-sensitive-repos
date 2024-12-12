@@ -61,7 +61,7 @@ async function fetchOrgRepos(context: OwnerContext): Promise<{
     context.github.fineGrainedPat.rest.orgs.listCustomPropertiesValuesForRepos,
     {
       org: context.login,
-    }
+    },
   )) {
     response.data.forEach((repo) => {
       const properties = repo.properties.reduce(
@@ -69,7 +69,7 @@ async function fetchOrgRepos(context: OwnerContext): Promise<{
           acc[property_name] = value;
           return acc;
         },
-        {} as Record<string, string | string[] | null>
+        {} as Record<string, string | string[] | null>,
       );
 
       repoInfo[repo.repository_id] = {
@@ -131,7 +131,7 @@ async function updateInstalledRepos({
           {
             installation_id: context.installId,
             repository_id: repo.id,
-          }
+          },
         );
       context.log.info(`+ ${repo.fullName} (status: ${res.status})`);
     } catch (err) {
@@ -147,13 +147,13 @@ async function updateInstalledRepos({
           {
             installation_id: context.installId,
             repository_id: repo.id,
-          }
+          },
         );
       context.log.info(`- ${repo.fullName} (status: ${res.status})`);
     } catch (err) {
       context.log.error(
         `Failed to remove ${repo.fullName} (id: ${repo.id})`,
-        err
+        err,
       );
     }
   }

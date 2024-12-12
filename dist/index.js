@@ -34299,15 +34299,13 @@ const ownersSchema = zod_1.z.array(zod_1.z.object({
     login: zod_1.z.string(),
     installId: zod_1.z.coerce.number(),
     fineGrainedPat: zod_1.z.string(),
-    skip: zod_1.z.optional(zod_1.z.coerce.boolean())
+    skip: zod_1.z.optional(zod_1.z.coerce.boolean()),
 }));
 function createContext() {
     const globalLogger = createLogger({
-        logPrefix: ''
+        logPrefix: "",
     });
-    globalLogger.info(`CLASSIC_PAT: ${core.getInput('classic-pat')}`);
-    globalLogger.info(`OWNERS: ${core.getInput('owners')}`);
-    const classicPat = github.getOctokit(core.getInput('classic-pat'));
+    const classicPat = github.getOctokit(core.getInput("classic-pat"));
     const status = {};
     const printSummary = () => {
         const keys = Object.keys(status).sort();
@@ -34317,19 +34315,19 @@ function createContext() {
             globalLogger.info(`${key}: ${status[key].toLowerCase()}`);
         }
     };
-    const hasFailure = () => Object.values(status).some(v => !v);
+    const hasFailure = () => Object.values(status).some((v) => !v);
     const owners = ownersSchema
-        .parse(JSON.parse(core.getInput('OWNERS')))
-        .map(owner => {
+        .parse(JSON.parse(core.getInput("OWNERS")))
+        .map((owner) => {
         const ownerLogger = createLogger({
-            logPrefix: `[${owner.login}]  `
+            logPrefix: `[${owner.login}]  `,
         });
         const attachRateLimitLogger = (octokit) => {
-            octokit.hook.after('request', (response, options) => {
+            octokit.hook.after("request", (response, options) => {
                 ownerLogger.debug(options.url);
-                ownerLogger.debug(`x-ratelimit-remaining: ${response.headers['x-ratelimit-remaining']}`);
-                ownerLogger.debug(`x-ratelimit-limit: ${response.headers['x-ratelimit-limit']}`);
-                const reset = parseFloat(response.headers['x-ratelimit-reset'] || '');
+                ownerLogger.debug(`x-ratelimit-remaining: ${response.headers["x-ratelimit-remaining"]}`);
+                ownerLogger.debug(`x-ratelimit-limit: ${response.headers["x-ratelimit-limit"]}`);
+                const reset = parseFloat(response.headers["x-ratelimit-reset"] || "");
                 if (!isNaN(reset)) {
                     // https://stackoverflow.com/questions/4631928/convert-utc-epoch-to-local-date
                     ownerLogger.debug(`x-ratelimit-reset: ${new Date(reset * 1000).toLocaleString()}`);
@@ -34342,27 +34340,27 @@ function createContext() {
             ...owner,
             github: {
                 classicPat: attachRateLimitLogger(classicPat),
-                fineGrainedPat: attachRateLimitLogger(fineGrainedPat)
+                fineGrainedPat: attachRateLimitLogger(fineGrainedPat),
             },
             log: ownerLogger,
-            setStatus: (result) => (status[owner.login] = result)
+            setStatus: (result) => (status[owner.login] = result),
         };
     });
     return {
         owners,
         status: {
             printSummary,
-            hasFailure
-        }
+            hasFailure,
+        },
     };
 }
 function createLogger({ logPrefix }) {
     const debug = (msg) => core.debug(logPrefix + msg);
     const info = (msg) => core.info(logPrefix + msg);
     const repos = (repos) => repos
-        .map(r => r.fullName)
+        .map((r) => r.fullName)
         .sort()
-        .forEach(r => info('  ' + r));
+        .forEach((r) => info("  " + r));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const error = (msg, err) => {
         core.error(logPrefix + msg);
@@ -34372,7 +34370,7 @@ function createLogger({ logPrefix }) {
         debug,
         info,
         repos,
-        error
+        error,
     };
 }
 
@@ -34434,7 +34432,7 @@ async function runOnOwner(context) {
     if (context.skip) {
         context.log.info(`Skipping ${context.login} as requested...`);
         context.log.info(``);
-        context.setStatus('SKIPPED');
+        context.setStatus("SKIPPED");
         return;
     }
     try {
@@ -34442,21 +34440,21 @@ async function runOnOwner(context) {
         await updateInstalledRepos({
             addRepos: nonSensitiveRepos,
             removeRepos: sensitiveRepos,
-            context
+            context,
         });
-        context.setStatus('SUCCESS');
+        context.setStatus("SUCCESS");
     }
     catch (err) {
         context.log.error(`Failed to run on ${context.login}`, err);
-        context.setStatus('FAILURE');
+        context.setStatus("FAILURE");
     }
 }
 async function fetchOrgRepos(context) {
     const repoInfo = {};
     for await (const response of context.github.fineGrainedPat.paginate.iterator(context.github.fineGrainedPat.rest.orgs.listCustomPropertiesValuesForRepos, {
-        org: context.login
+        org: context.login,
     })) {
-        response.data.forEach(repo => {
+        response.data.forEach((repo) => {
             const properties = repo.properties.reduce((acc, { property_name, value }) => {
                 acc[property_name] = value;
                 return acc;
@@ -34464,33 +34462,33 @@ async function fetchOrgRepos(context) {
             repoInfo[repo.repository_id] = {
                 id: repo.repository_id,
                 fullName: repo.repository_full_name,
-                properties
+                properties,
             };
         });
     }
     const sensitiveRepos = Object.values(repoInfo)
-        .filter(repo => repo.properties['sensitive'] == 'true')
+        .filter((repo) => repo.properties["sensitive"] == "true")
         .sort(repo_utils_js_1.sortRepos);
     const sensitiveReposSet = new Set();
-    sensitiveRepos.forEach(sr => sensitiveReposSet.add(sr.id));
+    sensitiveRepos.forEach((sr) => sensitiveReposSet.add(sr.id));
     const nonSensitiveRepos = Object.values(repoInfo)
-        .filter(repo => !sensitiveReposSet.has(repo.id))
+        .filter((repo) => !sensitiveReposSet.has(repo.id))
         .sort(repo_utils_js_1.sortRepos);
     context.log.info(`All '${context.login}' repos (visible to supplied token)`);
-    context.log.info('------------------------------');
-    context.log.info('');
+    context.log.info("------------------------------");
+    context.log.info("");
     context.log.info(`Sensitive [${sensitiveRepos.length}]:`);
     context.log.repos(sensitiveRepos);
-    context.log.info('');
+    context.log.info("");
     context.log.info(`Non-sensitive [${nonSensitiveRepos.length}]:`);
     context.log.repos(nonSensitiveRepos);
-    context.log.info('');
+    context.log.info("");
     return {
         sensitiveRepos,
-        nonSensitiveRepos
+        nonSensitiveRepos,
     };
 }
-async function updateInstalledRepos({ addRepos, removeRepos, context }) {
+async function updateInstalledRepos({ addRepos, removeRepos, context, }) {
     if (addRepos.length === 0 && removeRepos.length === 0) {
         return;
     }
@@ -34500,7 +34498,7 @@ async function updateInstalledRepos({ addRepos, removeRepos, context }) {
         try {
             const res = await context.github.classicPat.rest.apps.addRepoToInstallationForAuthenticatedUser({
                 installation_id: context.installId,
-                repository_id: repo.id
+                repository_id: repo.id,
             });
             context.log.info(`+ ${repo.fullName} (status: ${res.status})`);
         }
@@ -34513,7 +34511,7 @@ async function updateInstalledRepos({ addRepos, removeRepos, context }) {
         try {
             const res = await context.github.classicPat.rest.apps.removeRepoFromInstallationForAuthenticatedUser({
                 installation_id: context.installId,
-                repository_id: repo.id
+                repository_id: repo.id,
             });
             context.log.info(`- ${repo.fullName} (status: ${res.status})`);
         }
@@ -34521,6 +34519,7 @@ async function updateInstalledRepos({ addRepos, removeRepos, context }) {
             context.log.error(`Failed to remove ${repo.fullName} (id: ${repo.id})`, err);
         }
     }
+    context.log.info(``);
 }
 
 

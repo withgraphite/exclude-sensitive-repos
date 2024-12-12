@@ -13,7 +13,7 @@ const ownersSchema = z.array(
     installId: z.coerce.number(),
     fineGrainedPat: z.string(),
     skip: z.optional(z.coerce.boolean()),
-  })
+  }),
 );
 
 export function createContext() {
@@ -41,22 +41,22 @@ export function createContext() {
         logPrefix: `[${owner.login}]  `,
       });
       const attachRateLimitLogger = (
-        octokit: ReturnType<typeof github.getOctokit>
+        octokit: ReturnType<typeof github.getOctokit>,
       ) => {
         octokit.hook.after("request", (response, options) => {
           ownerLogger.debug(options.url);
           ownerLogger.debug(
-            `x-ratelimit-remaining: ${response.headers["x-ratelimit-remaining"]}`
+            `x-ratelimit-remaining: ${response.headers["x-ratelimit-remaining"]}`,
           );
           ownerLogger.debug(
-            `x-ratelimit-limit: ${response.headers["x-ratelimit-limit"]}`
+            `x-ratelimit-limit: ${response.headers["x-ratelimit-limit"]}`,
           );
 
           const reset = parseFloat(response.headers["x-ratelimit-reset"] || "");
           if (!isNaN(reset)) {
             // https://stackoverflow.com/questions/4631928/convert-utc-epoch-to-local-date
             ownerLogger.debug(
-              `x-ratelimit-reset: ${new Date(reset * 1000).toLocaleString()}`
+              `x-ratelimit-reset: ${new Date(reset * 1000).toLocaleString()}`,
             );
           }
         });
