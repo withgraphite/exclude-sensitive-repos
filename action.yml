@@ -3,11 +3,12 @@ description: 'Exclude repos tagged with "sensitive" from an app installation'
 author: "withgraphite"
 
 inputs:
-  classic-pat:
+  classic-pats:
     description: |
-      A classic PAT with `repo` permissions. This token will be used to manage 
-      the installed repositories on each of the app installations and must 
-      have access to the owners in question.
+      An array of classic PAT with `repo` permissions. These tokens will be 
+      used to manage the installed repositories on each of the app 
+      installations and must have access to the owners in question. Tokens will
+      be round robined to minimize the chance of hitting rate limits.
     required: true
 
   owners:

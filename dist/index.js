@@ -34301,11 +34301,12 @@ const ownersSchema = zod_1.z.array(zod_1.z.object({
     fineGrainedPat: zod_1.z.string(),
     skip: zod_1.z.optional(zod_1.z.coerce.boolean()),
 }));
+const classicPatTokensSchema = zod_1.z.array(zod_1.z.string());
 function createContext() {
     const globalLogger = createLogger({
         logPrefix: "",
     });
-    const classicPatToken = core.getInput("classic-pat");
+    const classicPatTokens = classicPatTokensSchema.parse(JSON.parse(core.getInput("classic-pats")));
     const status = {};
     const printSummary = () => {
         const keys = Object.keys(status).sort();
@@ -34327,7 +34328,7 @@ function createContext() {
             logger: ownerLogger,
         });
         const classicPat = createRoundRobinOctokit({
-            tokens: [classicPatToken],
+            tokens: classicPatTokens,
             logger: ownerLogger,
         });
         return {

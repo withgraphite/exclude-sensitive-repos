@@ -16,12 +16,16 @@ const ownersSchema = z.array(
   }),
 );
 
+const classicPatTokensSchema = z.array(z.string());
+
 export function createContext() {
   const globalLogger = createLogger({
     logPrefix: "",
   });
 
-  const classicPatToken = core.getInput("classic-pat");
+  const classicPatTokens = classicPatTokensSchema.parse(
+    JSON.parse(core.getInput("classic-pats")),
+  );
 
   const status: Record<string, OwnerStatus> = {};
   const printSummary = () => {
@@ -46,7 +50,7 @@ export function createContext() {
         logger: ownerLogger,
       });
       const classicPat = createRoundRobinOctokit({
-        tokens: [classicPatToken],
+        tokens: classicPatTokens,
         logger: ownerLogger,
       });
 
