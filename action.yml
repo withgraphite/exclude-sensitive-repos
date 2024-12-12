@@ -1,6 +1,6 @@
-name: 'exclude-sensitive-repos'
+name: "exclude-sensitive-repos"
 description: 'Exclude repos tagged with "sensitive" from an app installation'
-author: 'withgraphite'
+author: "withgraphite"
 
 inputs:
   classic-pat:
