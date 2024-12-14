@@ -34480,6 +34480,7 @@ async function fetchOrgRepos(context) {
         .paginate.iterator(context.github.fineGrainedPat().rest.orgs
         .listCustomPropertiesValuesForRepos, {
         org: context.login,
+        repository_query: "archived:false",
     })) {
         response.data.forEach((repo) => {
             const properties = repo.properties.reduce((acc, { property_name, value }) => {

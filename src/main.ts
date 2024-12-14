@@ -63,6 +63,7 @@ async function fetchOrgRepos(context: OwnerContext): Promise<{
         .listCustomPropertiesValuesForRepos,
       {
         org: context.login,
+        repository_query: "archived:false",
       },
     )) {
     response.data.forEach((repo) => {
