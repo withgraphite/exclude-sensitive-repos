@@ -2,6 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { z } from "zod";
 import { Repo } from "./repo_utils.js";
+import { sleep } from "./sleep.js";
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
 export type OwnerContext = Context["owners"][number];
@@ -27,6 +28,8 @@ export function createContext() {
     JSON.parse(core.getInput("classic-pats")),
   );
 
+  const sleepMs = parseInt(core.getInput("sleep-between-reqs-ms") || "0");
+
   const status: Record<string, OwnerStatus> = {};
   const printSummary = () => {
     const keys = Object.keys(status).sort();
@@ -47,10 +50,12 @@ export function createContext() {
 
       const fineGrainedPat = createRoundRobinOctokit({
         tokens: [owner.fineGrainedPat],
+        sleepBetweenRequestsMs: sleepMs,
         logger: ownerLogger,
       });
       const classicPat = createRoundRobinOctokit({
         tokens: classicPatTokens,
+        sleepBetweenRequestsMs: sleepMs,
         logger: ownerLogger,
       });
 
@@ -106,14 +111,26 @@ function createLogger({ logPrefix }: { logPrefix: string }) {
 function createRoundRobinOctokit({
   tokens,
   logger,
+  sleepBetweenRequestsMs,
 }: {
   tokens: string[];
   logger: Logger;
+  sleepBetweenRequestsMs: number;
 }) {
   let i = 0;
   return () => {
     i = (i + 1) % tokens.length;
-    const octokit = github.getOctokit(tokens[i]);
+
+    let octokit = github.getOctokit(tokens[i]);
+
+    if (sleepBetweenRequestsMs > 0) {
+      octokit = sleepAfterRequests({
+        octokit,
+        sleepMs: sleepBetweenRequestsMs,
+        logger,
+      });
+    }
+
     return attachRateLimitLogger({
       octokit,
       logger:
@@ -122,6 +139,22 @@ function createRoundRobinOctokit({
           : logger,
     });
   };
+}
+
+function sleepAfterRequests({
+  octokit,
+  sleepMs,
+  logger,
+}: {
+  octokit: ReturnType<typeof github.getOctokit>;
+  sleepMs: number;
+  logger: Logger;
+}) {
+  octokit.hook.after("request", async (response, options) => {
+    logger.debug(`Sleeping for ${sleepMs}ms per config...`);
+    await sleep({ milliseconds: sleepMs });
+  });
+  return octokit;
 }
 
 function attachRateLimitLogger({

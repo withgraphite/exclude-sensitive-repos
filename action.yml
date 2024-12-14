@@ -23,6 +23,12 @@ inputs:
       - `skip` (optional): if `true`, the owner will be skipped
     required: true
 
+  sleep-between-reqs-ms:
+    description: |
+      The number of milliseconds to sleep between each GitHub API request. This
+      is useful for reducing the risk of bumping into Github's API rate limits.
+    required: false
+
 runs:
   using: node20
   main: dist/index.js

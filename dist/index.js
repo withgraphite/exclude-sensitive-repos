@@ -34295,6 +34295,7 @@ exports.createContext = createContext;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
 const zod_1 = __nccwpck_require__(4809);
+const sleep_js_1 = __nccwpck_require__(6972);
 const ownersSchema = zod_1.z.array(zod_1.z.object({
     login: zod_1.z.string(),
     installId: zod_1.z.coerce.number(),
@@ -34307,6 +34308,7 @@ function createContext() {
         logPrefix: "",
     });
     const classicPatTokens = classicPatTokensSchema.parse(JSON.parse(core.getInput("classic-pats")));
+    const sleepMs = parseInt(core.getInput("sleep-between-reqs-ms") || "0");
     const status = {};
     const printSummary = () => {
         const keys = Object.keys(status).sort();
@@ -34325,10 +34327,12 @@ function createContext() {
         });
         const fineGrainedPat = createRoundRobinOctokit({
             tokens: [owner.fineGrainedPat],
+            sleepBetweenRequestsMs: sleepMs,
             logger: ownerLogger,
         });
         const classicPat = createRoundRobinOctokit({
             tokens: classicPatTokens,
+            sleepBetweenRequestsMs: sleepMs,
             logger: ownerLogger,
         });
         status[owner.login] = "SUCCESS";
@@ -34372,11 +34376,18 @@ function createLogger({ logPrefix }) {
         }),
     };
 }
-function createRoundRobinOctokit({ tokens, logger, }) {
+function createRoundRobinOctokit({ tokens, logger, sleepBetweenRequestsMs, }) {
     let i = 0;
     return () => {
         i = (i + 1) % tokens.length;
-        const octokit = github.getOctokit(tokens[i]);
+        let octokit = github.getOctokit(tokens[i]);
+        if (sleepBetweenRequestsMs > 0) {
+            octokit = sleepAfterRequests({
+                octokit,
+                sleepMs: sleepBetweenRequestsMs,
+                logger,
+            });
+        }
         return attachRateLimitLogger({
             octokit,
             logger: tokens.length > 1
@@ -34384,6 +34395,13 @@ function createRoundRobinOctokit({ tokens, logger, }) {
                 : logger,
         });
     };
+}
+function sleepAfterRequests({ octokit, sleepMs, logger, }) {
+    octokit.hook.after("request", async (response, options) => {
+        logger.debug(`Sleeping for ${sleepMs}ms per config...`);
+        await (0, sleep_js_1.sleep)({ milliseconds: sleepMs });
+    });
+    return octokit;
 }
 function attachRateLimitLogger({ octokit, logger, }) {
     octokit.hook.after("request", (response, options) => {
@@ -34573,6 +34591,22 @@ function sortRepos(a, b) {
     else {
         return -1;
     }
+}
+
+
+/***/ }),
+
+/***/ 6972:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sleep = sleep;
+async function sleep(args) {
+    await new Promise((resolve) => {
+        setTimeout(resolve, args.milliseconds);
+    });
 }
 
 
