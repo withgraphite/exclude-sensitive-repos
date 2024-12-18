@@ -31,9 +31,8 @@ async function runOnOwner(context: OwnerContext) {
   }
 
   try {
-    const { sensitiveRepos, nonSensitiveRepos } = await fetchOrgRepos(context);
+    const { sensitiveRepos } = await fetchOrgRepos(context);
     await updateInstalledRepos({
-      addRepos: nonSensitiveRepos,
       removeRepos: sensitiveRepos,
       context,
     });
@@ -45,7 +44,6 @@ async function runOnOwner(context: OwnerContext) {
 
 async function fetchOrgRepos(context: OwnerContext): Promise<{
   sensitiveRepos: Repo[];
-  nonSensitiveRepos: Repo[];
 }> {
   const repoInfo: Record<
     string,
@@ -89,9 +87,6 @@ async function fetchOrgRepos(context: OwnerContext): Promise<{
 
   const sensitiveReposSet = new Set();
   sensitiveRepos.forEach((sr) => sensitiveReposSet.add(sr.id));
-  const nonSensitiveRepos = Object.values(repoInfo)
-    .filter((repo) => !sensitiveReposSet.has(repo.id))
-    .sort(sortRepos);
 
   context.log.info(`All '${context.login}' repos (visible to supplied token)`);
   context.log.info("------------------------------");
@@ -101,46 +96,25 @@ async function fetchOrgRepos(context: OwnerContext): Promise<{
   context.log.repos(sensitiveRepos);
   context.log.info("");
 
-  context.log.info(`Non-sensitive [${nonSensitiveRepos.length}]:`);
-  context.log.repos(nonSensitiveRepos);
-  context.log.info("");
-
   return {
     sensitiveRepos,
-    nonSensitiveRepos,
   };
 }
 
 async function updateInstalledRepos({
-  addRepos,
   removeRepos,
   context,
 }: {
-  addRepos: Repo[];
   removeRepos: Repo[];
   context: OwnerContext;
 }) {
-  if (addRepos.length === 0 && removeRepos.length === 0) {
+  if (removeRepos.length === 0) {
+    context.log.info(`No repo adjustments needed!`);
+    context.log.info(``);
     return;
   }
 
   context.log.info(`Applying adjustments...`);
-  context.log.info(``);
-
-  for (const repo of addRepos) {
-    try {
-      const res = await context.github
-        .classicPat()
-        .rest.apps.addRepoToInstallationForAuthenticatedUser({
-          installation_id: context.installId,
-          repository_id: repo.id,
-        });
-      context.log.info(`+ ${repo.fullName} (status: ${res.status})`);
-    } catch (err) {
-      context.log.error(`Failed to add ${repo.fullName} (id: ${repo.id})`, err);
-      context.setStatus("FAILURE");
-    }
-  }
   context.log.info(``);
 
   for (const repo of removeRepos) {
